@@ -2,3 +2,4 @@
 *.sql
 
 data/
+.ipynb_checkpoints/
