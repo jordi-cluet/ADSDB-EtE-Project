@@ -1,5 +1,6 @@
 *.pdf
 *.sql
-
+*.csv
+s
 data/
 .ipynb_checkpoints/
