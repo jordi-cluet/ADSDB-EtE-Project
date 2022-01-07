@@ -55,6 +55,10 @@ def execute_values(conn, df, table):
     cursor.close()
 
 
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'''''''''''''''''''''''''''''''''' DATA PREPARATION '''''''''''''''''''''''''''''''''''
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
 ################################ Load housing table into formatted zone ################################
 
 # Read dataframe from CSV file
@@ -236,3 +240,43 @@ cursor.execute(sqlCreateTable)
 conn.commit()
 
 execute_values(conn, df, 'trusted_zone.ajunt_districtes_2021_21_12_24')
+
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'''''''''''''''''''''''''''''''''' MODELLING ''''''''''''''''''''''''''''''''''''''''''
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+# Select integrated table from exploitation zone
+sql = "SELECT * from exploitation_zone.housing_view;"
+df = pd.read_sql_query(sql, conn)
+
+# Feature engineering
+
+# Remove some variables that are not useful for our modelling
+df.drop(['id', 'price_per_sqm', 'discount'], axis=1, inplace=True)
+
+#  One-hot enconding of some variables
+ohe_bs = pd.get_dummies(df.building_subtype, prefix='bs')
+ohe_cs = pd.get_dummies(df.conservation_state, prefix='cs')
+ohe_d = pd.get_dummies(df.districte, prefix='d')
+ohe_n = pd.get_dummies(df.neighbourhood, prefix='n')
+df = pd.concat([df, ohe_bs, ohe_cs, ohe_d, ohe_n], axis=1)
+df.drop(['building_subtype', 'conservation_state', 'districte', 'neighbourhood'], axis=1, inplace=True)
+
+# Dataframe with crime variables, with district, with neighbourhood (i.e. with everything)
+df_neigh = df
+
+# Divide between train and validation sets
+from sklearn.model_selection import train_test_split
+X = df_neigh.drop('price', axis=1)
+y = df_neigh['price']
+X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Linear regression model
+from sklearn.linear_model import LinearRegression
+reg = LinearRegression().fit(X_train, y_train)
+
+# Save model in pickle file
+pkl_filename = "./model.pkl"
+with open(pkl_filename, 'wb') as file:
+    pickle.dump(reg, file)
