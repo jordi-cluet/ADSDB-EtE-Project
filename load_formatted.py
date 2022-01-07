@@ -91,6 +91,125 @@ conn.commit()
 execute_values(conn, df, 'formatted_zone.zenodo_fotocasa_2020_21_12_06')
 
 
+##################################### Format housing table for trusted zone #####################################
+
+#  Select whole table as dataframe
+sql = "SELECT * from formatted_zone.zenodo_fotocasa_2020_21_12_06;"
+df = pd.read_sql_query(sql, conn)
+
+# Remove useless columns
+df = df.drop(['extraction_date', 'link'], axis = 1)  # useless columns
+
+# Correct some data types
+df['id'] = df['id'].astype("object")
+df['address'] = df['address'].astype("string")
+df['building_subtype'] = df['building_subtype'].astype("category")
+df['building_type'] = df['building_type'].astype("category")
+df['conservation_state'] = df['conservation_state'].astype("category")
+df['floor_elevator'] = df['floor_elevator'].astype("bool")
+df['real_estate'] = df['real_estate'].astype("category")
+df['real_estate_id'] = df['real_estate_id'].astype("object")
+df['neighbourhood'] = df['neighbourhood'].astype("category")
+
+# Remove duplicates
+df = df[-df.iloc[:, 1:].duplicated()]
+df = df.reset_index(drop=True)
+
+# Check levels of categorical variables
+
+# building_type
+df = df.drop(['building_type'], axis = 1)
+
+# conservation_state
+df['conservation_state'] = df['conservation_state'].replace({
+    0: 'New construction', 
+    1: 'Nearly new', 
+    2: 'Very good', 
+    3: 'Good', 
+    4: 'To renovate', 
+    8: 'Renovated'
+  })
+df['conservation_state'] = df['conservation_state'].astype("category")
+
+# is_new_construction
+df = df.drop(['is_new_construction'], axis = 1)
+
+# Define function to get outliers
+def get_outliers(var, factor):
+    Q1 = df[var].quantile(0.25)
+    Q3 = df[var].quantile(0.75)
+    IQR = Q3 - Q1
+    outliers = (df[var] < Q1-factor*IQR) | (df[var] > Q3+factor*IQR)
+    return outliers
+
+# Analysis, missing values and outliers of numerical variables
+
+# bathrooms
+outliers = get_outliers('bathrooms', 3)
+df = df[-outliers]
+
+# discount
+outliers = get_outliers('discount', 5)
+df = df[-outliers]
+
+# price
+extreme_outliers = df['price'] > 15000
+df = df[-extreme_outliers]
+outliers = get_outliers('price', 5)
+df = df[-outliers]
+
+# rooms
+outliers = get_outliers('rooms', 3)
+df = df[-outliers]
+
+# sq_meters
+outliers = get_outliers('sq_meters', 5)
+df = df[-outliers]
+
+df = df.reset_index(drop=True)
+little = df['sq_meters'] <= 15
+df.loc[little, 'sq_meters'] = np.nan
+
+# neighbourhood_mean_price
+aux = df.iloc[:,-2:].drop_duplicates().dropna()
+aux = aux.sort_values(by=['neighbourhood_mean_price'], ascending=False)
+aux = aux.reset_index(drop=True)
+
+#  Missing values
+df = df.reset_index(drop=True)
+
+# Count missing values
+df = df.replace('NaN', np.nan, regex=True)
+
+# Manually correct 2 missings in neighbourhood and neighbourhood_mean_price
+df.loc[df['id'] == 968, 'neighbourhood'] = 'sant andreu'
+df.loc[df['id'] == 9380, 'neighbourhood'] = 'la marina de port'
+
+df.loc[df['id'] == 968, 'neighbourhood_mean_price'] = df[df['neighbourhood'] == 'sant andreu']['neighbourhood_mean_price'].mean()
+df.loc[df['id'] == 9380, 'neighbourhood_mean_price'] = df[df['neighbourhood'] == 'la marina de port']['neighbourhood_mean_price'].mean()
+
+# Remove 4 rows with missing price (since it is the target)
+df = df[-df['price'].isna()]
+
+# Impute missings in sq_meters using KNN method
+df = df.reset_index(drop=True)
+
+from sklearn.impute import KNNImputer
+imputer = KNNImputer(n_neighbors=5, weights="uniform")
+
+newData = df.select_dtypes('number').iloc[:,1:]
+newData = pd.DataFrame(imputer.fit_transform(newData), columns=newData.columns)
+
+df['sq_meters'] = newData['sq_meters'].copy()
+
+# Remove outliers on price_per_sqm
+df['price_per_sqm'] = df['price'] / df['sq_meters']
+extreme_outliers = df['price_per_sqm'] > 60
+
+df = df[-extreme_outliers]
+df = df.reset_index(drop=True)
+
+
 ################################ Load barris-districtes table into formatted zone ################################
 
 # Read dataframe from CSV file
