@@ -23,10 +23,10 @@ cursor = conn.cursor()
 
 #################### Ask for input files ####################
 
-housing_file_path = input("Please write the path to the housing file")
-barris_dist_file_path = input("Please write the path to the 'barris-districtes' correspondence file")
-dist_surf_pop_file_path = input("Please write the path to the 'districtes' surface and population file")
-crime_file_path = input("Please write the path to the district criminality file")
+housing_file_path = input("Please write the path to the housing file:\n")
+barris_dist_file_path = input("Please write the path to the 'barris-districtes' correspondence file:\n")
+dist_surf_pop_file_path = input("Please write the path to the 'districtes' surface and population file:\n")
+crime_file_path = input("Please write the path to the district criminality file:\n")
 
 # Get file names
 housing_name = os.path.basename(housing_file_path).rsplit('.')[0]
