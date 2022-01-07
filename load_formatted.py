@@ -6,6 +6,7 @@ import psycopg2
 import psycopg2.extras as extras
 import pandas as pd
 import numpy as np
+import pickle
 
 # Set connection with postgres database
 host = 'postgresfib.fib.upc.edu'
@@ -31,7 +32,9 @@ create_trusted_zone = """CREATE SCHEMA IF NOT EXISTS trusted_zone;"""
 cursor.execute(create_trusted_zone)
 conn.commit()
 
-# Function to insert rows into table
+
+################################## Function to insert rows into table ##################################
+
 def execute_values(conn, df, table):
   
     tuples = [tuple(x) for x in df.to_numpy()]
@@ -199,7 +202,7 @@ conn.commit()
 execute_values(conn, df, 'trusted_zone.ajunt_crime_2020_21_12_06')
 
 
-################################ Load district population and surface table into formatted zone ################################
+################### Load district population and surface table into formatted zone ###################
 
 # Read dataframe from CSV file
 df = pd.read_excel('data/ajunt_districtes_2021_21-12-24.xlsx')
@@ -220,7 +223,7 @@ conn.commit()
 execute_values(conn, df, 'formatted_zone.ajunt_districtes_2021_21_12_24')
 
 
-################################ Load districts table into trusted zone ################################
+################### Load district population and surface table into trusted zone ###################
 # --------------------------------- As no quality changes are needed -----------------------------------
 
 # Create new table in PostgreSQL database
