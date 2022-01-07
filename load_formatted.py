@@ -388,6 +388,120 @@ conn.commit()
 execute_values(conn, df, 'trusted_zone.ajunt_districtes_2021_21_12_24')
 
 
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+''''''''''''''''''''''''''''''' DATA INTEGRATION '''''''''''''''''''''''''''''''''''''
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+# Read all tables from trusted zone
+sql = "SELECT * from trusted_zone.zenodo_fotocasa_2020_21_12_06;"
+housing = pd.read_sql_query(sql, conn)
+
+sql = "SELECT * from trusted_zone.ajunt_crime_2020_21_12_06;"
+crime = pd.read_sql_query(sql, conn)
+
+sql = "SELECT * from trusted_zone.AJUNT_BARRIS_2017_21_12_06;"
+barris = pd.read_sql_query(sql, conn)
+
+sql = "SELECT * from trusted_zone.ajunt_districtes_2021_21_12_24;"
+districts = pd.read_sql_query(sql, conn)
+
+
+# Methods for entity resolution
+
+from difflib import SequenceMatcher
+
+def similar(a, b):
+    return SequenceMatcher(None, a, b).ratio()
+
+def entity(df1,df2,col1,col2):
+    names_1 = df1[col1].unique()
+    names_2 = df2[col2].unique()
+
+    matching = {}
+    for name in names_1:
+        best = 0
+        best_name = 'None'
+        for name1 in names_2:
+            distance = similar(name,name1)
+            if distance > best:
+                best = distance
+                best_name = name1
+        matching[name] = best_name
+
+    for key in matching:
+        df1.loc[df1[col1] == key, col1] = matching[key]
+    return df1, matching
+
+# Entity resolution
+housing, matching = entity(housing,barris,'neighbourhood','nom_barri')
+crime, matching2 = entity(crime,barris,'districte','nom_districte')
+districts, matching3 = entity(districts,barris,'districte','nom_districte')
+
+# Integrate datasets
+barris = barris.rename(columns={"nom_barri": "neighbourhood",'nom_districte':'districte'})
+housing = pd.merge(housing,barris,on='neighbourhood')
+housing = pd.merge(housing,districts,on='districte')
+housing = pd.merge(housing,crime,on='districte')
+
+# Remove useless columns for analysis
+housing.drop(['codi_barri', 'codi_districte', 'address', 'real_estate', 'real_estate_id', 'neighbourhood_mean_price'], axis=1, inplace=True)
+
+
+####################### Load integrated table into exploitation zone #######################
+
+# Create exploitation_zone schema if it does not exist
+create_exploitation_zone = """CREATE SCHEMA IF NOT EXISTS exploitation_zone;"""
+cursor.execute(create_exploitation_zone)
+conn.commit()
+
+# Create new table in PostgreSQL database
+sqlCreateTable = """CREATE TABLE IF NOT EXISTS exploitation_zone.housing_view (
+    ID INTEGER PRIMARY KEY,
+    BATHROOMS INTEGER,
+    BUILDING_SUBTYPE VARCHAR(30),
+    CONSERVATION_STATE VARCHAR(20),
+    DISCOUNT INTEGER,
+    FLOOR_ELEVATOR BOOLEAN,
+    PRICE FLOAT,
+    ROOMS INTEGER,
+    SQ_METERS FLOAT,
+    NEIGHBOURHOOD VARCHAR(45),
+    PRICE_PER_SQM FLOAT,
+    DISTRICTE VARCHAR(50),
+    SUPERFICIE FLOAT,
+    POBLACIO INTEGER,
+    FURT INTEGER,
+    ESTAFES INTEGER,
+    DANYS INTEGER,
+    ROB_VIOL_INTIM INTEGER,
+    ROB_EN_VEHICLE INTEGER,
+    ROB_FORÇA INTEGER,
+    LESIONS INTEGER,
+    APROP_INDEG INTEGER,
+    AMENACES INTEGER,
+    ROB_DE_VEHICLE INTEGER,
+    OCUPACIONS INTEGER,
+    SALUT_PUB INTEGER,
+    ABUSOS_SEX INTEGER,
+    ENTRADA_DOMICILI INTEGER,
+    AGRESSIO_SEX INTEGER,
+    CONVIV_VEINAL INTEGER,
+    VIGILANCIA_POLI INTEGER,
+    MOLESTIES_ESPAI_PUB INTEGER,
+    CONTRA_PROP_PRIV INTEGER,
+    INCENDIS INTEGER,
+    ESTUPEFAENTS INTEGER,
+    AGRESSIONS INTEGER,
+    PROVES_ALCOHOL INTEGER,
+    PROVES_DROGA INTEGER
+);"""
+cursor.execute(sqlCreateTable)
+conn.commit()
+
+# Insert rows into table
+execute_values(conn, housing, 'exploitation_zone.housing_view')
+
+
 '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 '''''''''''''''''''''''''''''''''' MODELLING ''''''''''''''''''''''''''''''''''''''''''
 '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
