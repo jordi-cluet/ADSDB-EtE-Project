@@ -2,6 +2,7 @@
 # coding: utf-8
 
 # Import libraries and packages
+import os
 import psycopg2
 import psycopg2.extras as extras
 import pandas as pd
@@ -18,6 +19,20 @@ sslmode = 'require'
 
 conn = psycopg2.connect("host='{}' port={} dbname='{}' user={} password={}".format(host, port, dbname, user, pwd))
 cursor = conn.cursor()
+
+
+#################### Ask for input files ####################
+
+housing_file_path = input("Please write the path to the housing file")
+barris_dist_file_path = input("Please write the path to the 'barris-districtes' correspondence file")
+dist_surf_pop_file_path = input("Please write the path to the 'districtes' surface and population file")
+crime_file_path = input("Please write the path to the district criminality file")
+
+# Get file names
+housing_name = os.path.basename(housing_file_path).rsplit('.')[0]
+barris_dist_name = os.path.basename(barris_dist_file_path).rsplit('.')[0]
+dist_surf_pop_name = os.path.basename(dist_surf_pop_file_path).rsplit('.')[0]
+crime_name = os.path.basename(crime_file_path).rsplit('.')[0]
 
 
 #################### Create formatted and trusted zone schemas if they do not exist ####################
@@ -62,10 +77,10 @@ def execute_values(conn, df, table):
 ################################ Load housing table into formatted zone ################################
 
 # Read dataframe from CSV file
-df = pd.read_csv('data/zenodo_fotocasa_2020_21-12-06_formatted.csv')
+df = pd.read_csv(housing_file_path)
 
 # Create new table in PostgreSQL database
-sqlCreateTable = """CREATE TABLE IF NOT EXISTS formatted_zone.zenodo_fotocasa_2020_21_12_06 (
+sqlCreateTable = f"""CREATE TABLE IF NOT EXISTS formatted_zone.{housing_name} (
     ID INTEGER PRIMARY KEY,
     ADDRESS VARCHAR(80),
     BATHROOMS INTEGER,
@@ -88,13 +103,13 @@ sqlCreateTable = """CREATE TABLE IF NOT EXISTS formatted_zone.zenodo_fotocasa_20
 cursor.execute(sqlCreateTable)
 conn.commit()
 
-execute_values(conn, df, 'formatted_zone.zenodo_fotocasa_2020_21_12_06')
+execute_values(conn, df, f'formatted_zone.{housing_name}')
 
 
 ##################################### Format housing table for trusted zone #####################################
 
 #  Select whole table as dataframe
-sql = "SELECT * from formatted_zone.zenodo_fotocasa_2020_21_12_06;"
+sql = f"SELECT * from formatted_zone.{housing_name};"
 df = pd.read_sql_query(sql, conn)
 
 # Remove useless columns
@@ -213,7 +228,7 @@ df = df.reset_index(drop=True)
 ################################ Load new housing table into trusted zone ################################
 
 # Create new table in PostgreSQL database
-sqlCreateTable = """CREATE TABLE IF NOT EXISTS trusted_zone.zenodo_fotocasa_2020_21_12_06 (
+sqlCreateTable = f"""CREATE TABLE IF NOT EXISTS trusted_zone.{housing_name} (
     ID INTEGER PRIMARY KEY,
     ADDRESS VARCHAR(80),
     BATHROOMS INTEGER,
@@ -234,16 +249,16 @@ cursor.execute(sqlCreateTable)
 conn.commit()
 
 # Insert rows into table
-execute_values(conn, df, 'trusted_zone.zenodo_fotocasa_2020_21_12_06')
+execute_values(conn, df, f'trusted_zone.{housing_name}')
 
 
 ################################ Load barris-districtes table into formatted zone ################################
 
 # Read dataframe from CSV file
-df = pd.read_csv('data/ajunt_barris_2017_21-12-06.csv')
+df = pd.read_csv(barris_dist_file_path)
 
 # Create new table in PostgreSQL database
-sqlCreateTable = """CREATE TABLE IF NOT EXISTS formatted_zone.AJUNT_BARRIS_2017_21_12_06 (
+sqlCreateTable = f"""CREATE TABLE IF NOT EXISTS formatted_zone.{barris_dist_name} (
     CODI_DISTRICTE INTEGER,
     NOM_DISTRICTE VARCHAR(50),
     CODI_BARRI INTEGER,
@@ -252,14 +267,14 @@ cursor.execute(sqlCreateTable)
 conn.commit()
 
 # Insert rows into table
-execute_values(conn, df, 'formatted_zone.AJUNT_BARRIS_2017_21_12_06')
+execute_values(conn, df, f'formatted_zone.{barris_dist_name}')
 
 
 ################################ Load barris-districtes table into trusted zone ################################
 # ------------------------------------ As no quality changes are needed ----------------------------------------
 
 # Create new table in PostgreSQL database
-sqlCreateTable = """CREATE TABLE IF NOT EXISTS trusted_zone.AJUNT_BARRIS_2017_21_12_06 (
+sqlCreateTable = f"""CREATE TABLE IF NOT EXISTS trusted_zone.{barris_dist_name} (
     CODI_DISTRICTE INTEGER,
     NOM_DISTRICTE VARCHAR(50),
     CODI_BARRI INTEGER,
@@ -268,19 +283,19 @@ cursor.execute(sqlCreateTable)
 conn.commit()
 
 # Insert rows into table
-execute_values(conn, df, 'trusted_zone.AJUNT_BARRIS_2017_21_12_06')
+execute_values(conn, df, f'trusted_zone.{barris_dist_name}')
 
 
 ################################ Load crime table into formatted zone ################################
 
 # Read dataframe from CSV file
-df = pd.read_excel('data/ajunt_crime_2020_21-12-06_final.xlsx')
+df = pd.read_excel(crime_file_path)
 
 # Rename columns
 df.columns = ['Districte', 'Furt', 'Estafes', 'Danys', 'Rob_viol_intim', 'Rob_en_vehicle', 'Rob_força', 'Lesions', 'Aprop_indeg', 'Amenaces', 'Rob_de_vehicle', 'Ocupacions', 'Salut_pub', 'Abusos_sex', 'Entrada_domicili', 'Agressio_sex', 'Conviv_veinal', 'Vigilancia_poli', 'Molesties_espai_pub', 'Contra_prop_priv', 'Incendis', 'Estupefaents', 'Agressions', 'Proves_alcohol','Proves_droga']
 
 # Create new table in PostgreSQL database
-sqlCreateTable = """CREATE TABLE IF NOT EXISTS formatted_zone.ajunt_crime_2020_21_12_06 (
+sqlCreateTable = f"""CREATE TABLE IF NOT EXISTS formatted_zone.{crime_name} (
     DISTRICTE VARCHAR(50),
     FURT INTEGER,
     ESTAFES INTEGER,
@@ -311,14 +326,14 @@ cursor.execute(sqlCreateTable)
 conn.commit()
 
 # Insert rows into table
-execute_values(conn, df, 'formatted_zone.ajunt_crime_2020_21_12_06')
+execute_values(conn, df, f'formatted_zone.{crime_name}')
 
 
 ################################ Load crime table into trusted zone ################################
 # ------------------------------- As no quality changes are needed ---------------------------------
 
 # Create new table in PostgreSQL database
-sqlCreateTable = """CREATE TABLE IF NOT EXISTS trusted_zone.ajunt_crime_2020_21_12_06 (
+sqlCreateTable = f"""CREATE TABLE IF NOT EXISTS trusted_zone.{crime_name} (
     DISTRICTE VARCHAR(50),
     FURT INTEGER,
     ESTAFES INTEGER,
@@ -349,19 +364,19 @@ cursor.execute(sqlCreateTable)
 conn.commit()
 
 # Insert rows into table
-execute_values(conn, df, 'trusted_zone.ajunt_crime_2020_21_12_06')
+execute_values(conn, df, f'trusted_zone.{crime_name}')
 
 
 ################### Load district population and surface table into formatted zone ###################
 
 # Read dataframe from CSV file
-df = pd.read_excel('data/ajunt_districtes_2021_21-12-24.xlsx')
+df = pd.read_excel(dist_surf_pop_file_path)
 
 # Rename columns
 df.columns = ['Districte', 'Superficie', 'Poblacio']
 
 # Create new table in PostgreSQL database
-sqlCreateTable = """CREATE TABLE IF NOT EXISTS formatted_zone.ajunt_districtes_2021_21_12_24 (
+sqlCreateTable = f"""CREATE TABLE IF NOT EXISTS formatted_zone.{dist_surf_pop_name} (
     DISTRICTE VARCHAR(50),
     SUPERFICIE FLOAT,
     POBLACIO INTEGER
@@ -370,14 +385,14 @@ cursor.execute(sqlCreateTable)
 conn.commit()
 
 # Insert rows into table
-execute_values(conn, df, 'formatted_zone.ajunt_districtes_2021_21_12_24')
+execute_values(conn, df, f'formatted_zone.{dist_surf_pop_name}')
 
 
 ################### Load district population and surface table into trusted zone ###################
 # --------------------------------- As no quality changes are needed -----------------------------------
 
 # Create new table in PostgreSQL database
-sqlCreateTable = """CREATE TABLE IF NOT EXISTS trusted_zone.ajunt_districtes_2021_21_12_24 (
+sqlCreateTable = f"""CREATE TABLE IF NOT EXISTS trusted_zone.{dist_surf_pop_name} (
     DISTRICTE VARCHAR(50), 
     SUPERFICIE FLOAT,
     POBLACIO INTEGER
@@ -385,7 +400,7 @@ sqlCreateTable = """CREATE TABLE IF NOT EXISTS trusted_zone.ajunt_districtes_202
 cursor.execute(sqlCreateTable)
 conn.commit()
 
-execute_values(conn, df, 'trusted_zone.ajunt_districtes_2021_21_12_24')
+execute_values(conn, df, f'trusted_zone.{dist_surf_pop_name}')
 
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -393,16 +408,16 @@ execute_values(conn, df, 'trusted_zone.ajunt_districtes_2021_21_12_24')
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 # Read all tables from trusted zone
-sql = "SELECT * from trusted_zone.zenodo_fotocasa_2020_21_12_06;"
+sql = f"SELECT * from trusted_zone.{housing_name};"
 housing = pd.read_sql_query(sql, conn)
 
-sql = "SELECT * from trusted_zone.ajunt_crime_2020_21_12_06;"
+sql = f"SELECT * from trusted_zone.{crime_name};"
 crime = pd.read_sql_query(sql, conn)
 
-sql = "SELECT * from trusted_zone.AJUNT_BARRIS_2017_21_12_06;"
+sql = f"SELECT * from trusted_zone.{barris_dist_name};"
 barris = pd.read_sql_query(sql, conn)
 
-sql = "SELECT * from trusted_zone.ajunt_districtes_2021_21_12_24;"
+sql = f"SELECT * from trusted_zone.{dist_surf_pop_name};"
 districts = pd.read_sql_query(sql, conn)
 
 
