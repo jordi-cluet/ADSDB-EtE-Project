@@ -180,3 +180,18 @@ conn.commit()
 
 # Insert rows into table
 execute_values(conn, df, 'formatted_zone.ajunt_districtes_2021_21_12_24')
+
+
+################################ Load districts table into trusted zone ################################
+# --------------------------------- As no quality changes are needed -----------------------------------
+
+# Create new table in PostgreSQL database
+sqlCreateTable = """CREATE TABLE IF NOT EXISTS trusted_zone.ajunt_districtes_2021_21_12_24 (
+    DISTRICTE VARCHAR(50), 
+    SUPERFICIE FLOAT,
+    POBLACIO INTEGER
+);"""
+cursor.execute(sqlCreateTable)
+conn.commit()
+
+execute_values(conn, df, 'trusted_zone.ajunt_districtes_2021_21_12_24')
