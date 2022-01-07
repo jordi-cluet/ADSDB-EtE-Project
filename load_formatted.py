@@ -161,6 +161,44 @@ conn.commit()
 execute_values(conn, df, 'formatted_zone.ajunt_crime_2020_21_12_06')
 
 
+################################ Load crime table into trusted zone ################################
+# ------------------------------- As no quality changes are needed ---------------------------------
+
+# Create new table in PostgreSQL database
+sqlCreateTable = """CREATE TABLE IF NOT EXISTS trusted_zone.ajunt_crime_2020_21_12_06 (
+    DISTRICTE VARCHAR(50),
+    FURT INTEGER,
+    ESTAFES INTEGER,
+    DANYS INTEGER,
+    ROB_VIOL_INTIM INTEGER,
+    ROB_EN_VEHICLE INTEGER,
+    ROB_FORÇA INTEGER,
+    LESIONS INTEGER,
+    APROP_INDEG INTEGER,
+    AMENACES INTEGER,
+    ROB_DE_VEHICLE INTEGER,
+    OCUPACIONS INTEGER,
+    SALUT_PUB INTEGER,
+    ABUSOS_SEX INTEGER,
+    ENTRADA_DOMICILI INTEGER,
+    AGRESSIO_SEX INTEGER,
+    CONVIV_VEINAL INTEGER,
+    VIGILANCIA_POLI INTEGER,
+    MOLESTIES_ESPAI_PUB INTEGER,
+    CONTRA_PROP_PRIV INTEGER,
+    INCENDIS INTEGER,
+    ESTUPEFAENTS INTEGER,
+    AGRESSIONS INTEGER,
+    PROVES_ALCOHOL INTEGER,
+    PROVES_DROGA INTEGER
+);"""
+cursor.execute(sqlCreateTable)
+conn.commit()
+
+# Insert rows into table
+execute_values(conn, df, 'trusted_zone.ajunt_crime_2020_21_12_06')
+
+
 ################################ Load district population and surface table into formatted zone ################################
 
 # Read dataframe from CSV file
