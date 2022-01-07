@@ -210,6 +210,33 @@ df = df[-extreme_outliers]
 df = df.reset_index(drop=True)
 
 
+################################ Load new housing table into trusted zone ################################
+
+# Create new table in PostgreSQL database
+sqlCreateTable = """CREATE TABLE IF NOT EXISTS trusted_zone.zenodo_fotocasa_2020_21_12_06 (
+    ID INTEGER PRIMARY KEY,
+    ADDRESS VARCHAR(80),
+    BATHROOMS INTEGER,
+    BUILDING_SUBTYPE VARCHAR(30),
+    CONSERVATION_STATE VARCHAR(20),
+    DISCOUNT INTEGER,
+    FLOOR_ELEVATOR BOOLEAN,
+    PRICE FLOAT,
+    REAL_ESTATE VARCHAR(55),
+    REAL_ESTATE_ID VARCHAR(20),
+    ROOMS INTEGER,
+    SQ_METERS FLOAT,
+    NEIGHBOURHOOD VARCHAR(45),
+    NEIGHBOURHOOD_MEAN_PRICE FLOAT,
+    PRICE_PER_SQM FLOAT
+);"""
+cursor.execute(sqlCreateTable)
+conn.commit()
+
+# Insert rows into table
+execute_values(conn, df, 'trusted_zone.zenodo_fotocasa_2020_21_12_06')
+
+
 ################################ Load barris-districtes table into formatted zone ################################
 
 # Read dataframe from CSV file
