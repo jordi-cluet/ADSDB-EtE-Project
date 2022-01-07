@@ -19,15 +19,43 @@ conn = psycopg2.connect("host='{}' port={} dbname='{}' user={} password={}".form
 cursor = conn.cursor()
 
 
-################################ Load housing table into formatted zone ################################
-
-# Read dataframe from CSV file
-df = pd.read_csv('data/zenodo_fotocasa_2020_21-12-06_formatted.csv')
+#################### Create formatted and trusted zone schemas if they do not exist ####################
 
 # Create formatted_zone schema if it does not exist
 create_formatted_zone = """CREATE SCHEMA IF NOT EXISTS formatted_zone;"""
 cursor.execute(create_formatted_zone)
 conn.commit()
+
+# Create trusted_zone schema if it does not exist
+create_trusted_zone = """CREATE SCHEMA IF NOT EXISTS trusted_zone;"""
+cursor.execute(create_trusted_zone)
+conn.commit()
+
+# Function to insert rows into table
+def execute_values(conn, df, table):
+  
+    tuples = [tuple(x) for x in df.to_numpy()]
+  
+    cols = ','.join(list(df.columns))
+    # SQL query to execute
+    query = "INSERT INTO %s(%s) VALUES %%s" % (table, cols)
+    cursor = conn.cursor()
+    try:
+        extras.execute_values(cursor, query, tuples)
+        conn.commit()
+    except (Exception, psycopg2.DatabaseError) as error:
+        print("Error: %s" % error)
+        conn.rollback()
+        cursor.close()
+        return 1
+    print("The dataframe was correctly inserted")
+    cursor.close()
+
+
+################################ Load housing table into formatted zone ################################
+
+# Read dataframe from CSV file
+df = pd.read_csv('data/zenodo_fotocasa_2020_21-12-06_formatted.csv')
 
 # Create new table in PostgreSQL database
 sqlCreateTable = """CREATE TABLE IF NOT EXISTS formatted_zone.zenodo_fotocasa_2020_21_12_06 (
@@ -53,26 +81,6 @@ sqlCreateTable = """CREATE TABLE IF NOT EXISTS formatted_zone.zenodo_fotocasa_20
 cursor.execute(sqlCreateTable)
 conn.commit()
 
-# Insert rows into table
-def execute_values(conn, df, table):
-  
-    tuples = [tuple(x) for x in df.to_numpy()]
-  
-    cols = ','.join(list(df.columns))
-    # SQL query to execute
-    query = "INSERT INTO %s(%s) VALUES %%s" % (table, cols)
-    cursor = conn.cursor()
-    try:
-        extras.execute_values(cursor, query, tuples)
-        conn.commit()
-    except (Exception, psycopg2.DatabaseError) as error:
-        print("Error: %s" % error)
-        conn.rollback()
-        cursor.close()
-        return 1
-    print("The dataframe was correctly inserted")
-    cursor.close()
-
 execute_values(conn, df, 'formatted_zone.zenodo_fotocasa_2020_21_12_06')
 
 
@@ -95,12 +103,7 @@ execute_values(conn, df, 'formatted_zone.AJUNT_BARRIS_2017_21_12_06')
 
 
 ################################ Load barris-districtes table into trusted zone ################################
-# As no quality changes are needed.
-
-# Create trusted_zone schema if it does not exist
-create_trusted_zone = """CREATE SCHEMA IF NOT EXISTS trusted_zone;"""
-cursor.execute(create_trusted_zone)
-conn.commit()
+# ------------------------------------ As no quality changes are needed ----------------------------------------
 
 # Create new table in PostgreSQL database
 sqlCreateTable = """CREATE TABLE IF NOT EXISTS trusted_zone.AJUNT_BARRIS_2017_21_12_06 (
@@ -122,11 +125,6 @@ df = pd.read_excel('data/ajunt_crime_2020_21-12-06_final.xlsx')
 
 # Rename columns
 df.columns = ['Districte', 'Furt', 'Estafes', 'Danys', 'Rob_viol_intim', 'Rob_en_vehicle', 'Rob_força', 'Lesions', 'Aprop_indeg', 'Amenaces', 'Rob_de_vehicle', 'Ocupacions', 'Salut_pub', 'Abusos_sex', 'Entrada_domicili', 'Agressio_sex', 'Conviv_veinal', 'Vigilancia_poli', 'Molesties_espai_pub', 'Contra_prop_priv', 'Incendis', 'Estupefaents', 'Agressions', 'Proves_alcohol','Proves_droga']
-
-# Create formatted_zone schema if it does not exist
-create_formatted_zone = """CREATE SCHEMA IF NOT EXISTS formatted_zone;"""
-cursor.execute(create_formatted_zone)
-conn.commit()
 
 # Create new table in PostgreSQL database
 sqlCreateTable = """CREATE TABLE IF NOT EXISTS formatted_zone.ajunt_crime_2020_21_12_06 (
