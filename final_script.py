@@ -190,18 +190,17 @@ aux = df.iloc[:,-2:].drop_duplicates().dropna()
 aux = aux.sort_values(by=['neighbourhood_mean_price'], ascending=False)
 aux = aux.reset_index(drop=True)
 
-#  Missing values
+# Missing values
 df = df.reset_index(drop=True)
 
-# Count missing values
+# Re-encode missing values
 df = df.replace('NaN', np.nan, regex=True)
 
-# Manually correct 2 missings in neighbourhood and neighbourhood_mean_price
-df.loc[df['id'] == 968, 'neighbourhood'] = 'sant andreu'
-df.loc[df['id'] == 9380, 'neighbourhood'] = 'la marina de port'
-
-df.loc[df['id'] == 968, 'neighbourhood_mean_price'] = df[df['neighbourhood'] == 'sant andreu']['neighbourhood_mean_price'].mean()
-df.loc[df['id'] == 9380, 'neighbourhood_mean_price'] = df[df['neighbourhood'] == 'la marina de port']['neighbourhood_mean_price'].mean()
+# Correct missings in neighbourhood
+indexes = df['neighbourhood'].isna()
+df['neighbourhood'] = df['neighbourhood'].astype("string")
+df.loc[indexes, "neighbourhood"] = df.loc[indexes, "address"]
+df['neighbourhood'] = df['neighbourhood'].astype("category")
 
 # Remove 4 rows with missing price (since it is the target)
 df = df[-df['price'].isna()]
