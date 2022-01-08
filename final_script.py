@@ -516,6 +516,53 @@ conn.commit()
 execute_values(conn, housing, 'exploitation_zone.housing_view')
 
 
+############## Save dataframe with full neighbourhood data for prediction script ##############
+
+# Merge barris, districtes and crime tables
+barris_dist = pd.merge(barris, districts, on='districte')
+barris_dist_crime = pd.merge(barris_dist, crime, on='districte')
+
+# Drop unuseful columns
+barris_dist_crime.drop(['codi_barri', 'codi_districte'], axis=1, inplace=True)
+
+# Create new table in PostgreSQL database
+sqlCreateTable = """CREATE TABLE IF NOT EXISTS exploitation_zone.barris_view (
+    DISTRICTE VARCHAR(50),
+    NEIGHBOURHOOD VARCHAR(45),
+    SUPERFICIE FLOAT,
+    POBLACIO INTEGER,
+    FURT INTEGER,
+    ESTAFES INTEGER,
+    DANYS INTEGER,
+    ROB_VIOL_INTIM INTEGER,
+    ROB_EN_VEHICLE INTEGER,
+    ROB_FORÇA INTEGER,
+    LESIONS INTEGER,
+    APROP_INDEG INTEGER,
+    AMENACES INTEGER,
+    ROB_DE_VEHICLE INTEGER,
+    OCUPACIONS INTEGER,
+    SALUT_PUB INTEGER,
+    ABUSOS_SEX INTEGER,
+    ENTRADA_DOMICILI INTEGER,
+    AGRESSIO_SEX INTEGER,
+    CONVIV_VEINAL INTEGER,
+    VIGILANCIA_POLI INTEGER,
+    MOLESTIES_ESPAI_PUB INTEGER,
+    CONTRA_PROP_PRIV INTEGER,
+    INCENDIS INTEGER,
+    ESTUPEFAENTS INTEGER,
+    AGRESSIONS INTEGER,
+    PROVES_ALCOHOL INTEGER,
+    PROVES_DROGA INTEGER
+);"""
+cursor.execute(sqlCreateTable)
+conn.commit()
+
+# Insert rows into table
+execute_values(conn, barris_dist_crime, 'exploitation_zone.barris_view')
+
+
 '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 '''''''''''''''''''''''''''''''''' MODELLING ''''''''''''''''''''''''''''''''''''''''''
 '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
