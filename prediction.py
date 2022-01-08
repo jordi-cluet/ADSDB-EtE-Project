@@ -69,7 +69,7 @@ d = {'bathrooms': [bathrooms],
     'neighbourhood': [neighbourhood]}
 df = pd.DataFrame(data=d)
 
-# Load tables from trusted zone
+# Load barris_view from exploitation zone
 host = 'postgresfib.fib.upc.edu'
 dbname = 'ADSDBjordi.cluet'
 user = 'jordi.cluet'
@@ -80,52 +80,14 @@ sslmode = 'require'
 conn = psycopg2.connect("host='{}' port={} dbname='{}' user={} password={}".format(host, port, dbname, user, pwd))
 cursor = conn.cursor()
 
-sql = "SELECT * from trusted_zone.ajunt_crime_2020_21_12_06;"
-crime = pd.read_sql_query(sql, conn)
-
-sql = "SELECT * from trusted_zone.AJUNT_BARRIS_2017_21_12_06;"
-barris = pd.read_sql_query(sql, conn)
-
-sql = "SELECT * from trusted_zone.ajunt_districtes_2021_21_12_24;"
-districts = pd.read_sql_query(sql, conn)
-
-def similar(a, b):
-    return SequenceMatcher(None, a, b).ratio()
-
-def entity(df1,df2,col1,col2):
-    names_1 = df1[col1].unique()
-    names_2 = df2[col2].unique()
-
-    matching = {}
-    for name in names_1:
-        best = 0
-        best_name = 'None'
-        for name1 in names_2:
-            distance = similar(name,name1)
-            if distance > best:
-                best = distance
-                best_name = name1
-        matching[name] = best_name
-
-    for key in matching:
-        df1.loc[df1[col1] == key, col1] = matching[key]
-    return df1, matching
-
-crime, matching2 = entity(crime,barris,'districte','nom_districte')
-districts, matching3 = entity(districts,barris,'districte','nom_districte')
-
-barris = barris.rename(columns={"nom_barri": "neighbourhood",'nom_districte':'districte'})
-
-merged = pd.merge(barris,districts,on='districte')
-merged = pd.merge(merged,crime,on='districte')
-
-merged.drop(['codi_barri', 'codi_districte'], axis=1, inplace=True)
+sql = "SELECT * from exploitation_zone.barris_view;"
+barris_view = pd.read_sql_query(sql, conn)
 
 
 # Prediction
 
 # Augmentate data
-dfm = pd.merge(df, merged, on='neighbourhood')
+dfm = pd.merge(df, barris_view, on='neighbourhood')
 
 # Add categories that are not in the row to be predicted
 dfm.building_subtype = dfm.building_subtype.astype('category')
